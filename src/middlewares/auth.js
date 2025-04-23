@@ -1,33 +1,29 @@
 const JWT = require("jsonwebtoken");
 const User = require("../models/user");
-const logger = require("../utils/logger");
+const ApiError = require("../utils/ApiError"); // Assuming you have this
 
 const userAuth = async (req, res, next) => {
   try {
-    const token = req.cookies.token;
+    const authHeader = req.headers.authorization;
 
-    if (!token) {
-      logger.warn("Unauthorized access attempt. No token provided.");
-      return res.status(401).json({ message: "Please login to continue." });
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      throw new ApiError(401, "No token provided");
     }
+
+    const token = authHeader.split(" ")[1];
 
     const decoded = JWT.verify(token, process.env.JWT_SECRET);
 
-    const user = await User.findById(decoded?._id);
+    const user = await User.findById(decoded.id).select("-password");
     if (!user) {
-      logger.warn("Token valid but user not found.");
-      return res.status(404).json({ message: "User not found." });
+      throw new ApiError(404, "User not found");
     }
 
-    logger.info(
-      `🔐 Authenticated request by: ${user.firstName} ${user.lastName}`
-    );
     req.user = user;
-    return next();
+    next();
   } catch (error) {
-    logger.error("❌ Auth error: ", error.message);
-    return res.status(401).json({ error: "Invalid or expired token." });
+    next(error);
   }
 };
 
-module.exports = { userAuth };
+module.exports = userAuth;

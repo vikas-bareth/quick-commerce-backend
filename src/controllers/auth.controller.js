@@ -1,6 +1,4 @@
-const { validateSignUpData } = require("../utils/validation");
 const ApiError = require("../utils/ApiError");
-const bcrypt = require("bcrypt");
 
 const User = require("../models/user");
 
@@ -20,7 +18,7 @@ exports.signup = async (req, res, next) => {
 
     //create user:
     const user = await User.create({ name, email, password, role });
-    const token = User.getJWT();
+    const token = user.getJWT();
     // res.cookie("token", token, { expires: new Date(Date.now() + 8 * 3600000) })
     res.status(201).json({
       success: true,

@@ -29,6 +29,7 @@ app.use(
   })
 );
 
+const authRouter = require("./src/routes/auth.route");
 const logger = require("./src/utils/logger");
 
 app.get("/", (req, res) => {
@@ -37,6 +38,7 @@ app.get("/", (req, res) => {
     .json({ message: "Welcome to quick-commerce backend application!" });
 });
 
+app.use("/auth", authRouter);
 app.use(errorHandler);
 
 connectDB().then(() => {
