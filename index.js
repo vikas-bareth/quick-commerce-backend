@@ -11,6 +11,9 @@ const cookieParser = require("cookie-parser");
 const errorHandler = require("./src/middlewares/errorHandler");
 const listEndpoints = require("express-list-endpoints");
 const cors = require("cors");
+const logger = require("./src/utils/logger");
+const authRouter = require("./src/routes/auth.route");
+const orderRouter = require("./src/routes/order.route");
 
 //Middleware
 app.use(
@@ -29,9 +32,6 @@ app.use(
   })
 );
 
-const authRouter = require("./src/routes/auth.route");
-const logger = require("./src/utils/logger");
-
 app.get("/", (req, res) => {
   return res
     .status(200)
@@ -39,6 +39,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/auth", authRouter);
+app.use("/orders", orderRouter);
 app.use(errorHandler);
 
 connectDB().then(() => {
