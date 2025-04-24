@@ -1,8 +1,10 @@
 const Order = require("../models/order");
+const mongoose = require("mongoose");
 
 exports.ERRORS = {
   INVALID_STATUS: "INVALID_STATUS",
   ORDER_NOT_FOUND: "ORDER_NOT_FOUND",
+  INVALID_ORDER_ID: "INVALID_ORDER_ID",
 };
 
 exports.createOrder = async (customerId, orderData) => {
@@ -29,10 +31,13 @@ exports.getPendingOrders = async () => {
 };
 
 exports.updateOrderStatus = async (orderId, deliveryPartnerId, newStatus) => {
-  const validStatuses = ["Accepted", "Out for Delivery", "Delivered"];
+  if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    throw new Error(this.ERRORS.INVALID_ORDER_ID);
+  }
+  const validStatuses = ["ACCEPTED", "OUT_FOR_DELIVERY", "DELIVERED"];
 
   if (!validStatuses.includes(newStatus)) {
-    throw new Error(ERRORS.INVALID_STATUS); // Generic error
+    throw new Error(this.ERRORS.INVALID_STATUS);
   }
 
   const order = await Order.findByIdAndUpdate(
@@ -41,11 +46,11 @@ exports.updateOrderStatus = async (orderId, deliveryPartnerId, newStatus) => {
       status: newStatus,
       deliveryPartner: deliveryPartnerId,
     },
-    { new: true }
+    { new: true, runValidators: true }
   );
 
   if (!order) {
-    throw new Error(ERRORS.ORDER_NOT_FOUND); // Generic error
+    throw new Error(ERRORS.ORDER_NOT_FOUND);
   }
 
   return order;
@@ -55,4 +60,21 @@ exports.getOrderHistory = async (userId) => {
   return await Order.find({
     $or: [{ customer: userId }, { deliveryPartner: userId }],
   }).sort({ createdAt: -1 });
+};
+
+exports.getOrderById = async (orderId, userId) => {
+  if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    throw new Error("INVALID_ORDER_ID");
+  }
+
+  const order = await Order.findOne({
+    _id: orderId,
+    customer: userId,
+  });
+
+  if (!order) {
+    throw new Error("ORDER_NOT_FOUND");
+  }
+
+  return order;
 };

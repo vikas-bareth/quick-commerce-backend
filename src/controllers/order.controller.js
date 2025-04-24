@@ -1,6 +1,5 @@
 const orderService = require("../services/order.service");
 const ApiError = require("../utils/ApiError");
-const mongoose = require("mongoose");
 
 exports.createOrder = async (req, res, next) => {
   try {
@@ -73,10 +72,6 @@ exports.updateOrderStatus = async (req, res, next) => {
       throw new ApiError(400, "Order ID is required");
     }
 
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      throw new ApiError(400, "Invalid Order ID format");
-    }
-
     const order = await orderService.updateOrderStatus(
       orderId,
       req.user._id,
@@ -88,11 +83,45 @@ exports.updateOrderStatus = async (req, res, next) => {
       order,
     });
   } catch (error) {
-    next(error);
+    switch (error.message) {
+      case "INVALID_STATUS":
+        next(new ApiError(400, "Invalid order status"));
+        break;
+      case "INVALID_ORDER_ID":
+        next(new ApiError(400, "Invalid order ID format"));
+        break;
+      case "ORDER_NOT_FOUND":
+        next(new ApiError(404, "Order not found or access denied"));
+        break;
+      default:
+        next(error);
+    }
   }
 };
 
 exports.getOrderHistory = async (req, res) => {
   const orders = await orderService.getOrderHistory(req.user._id);
   res.status(200).json({ success: true, orders });
+};
+
+exports.getOrder = async (req, res, next) => {
+  try {
+    const order = await orderService.getOrderById(req.params.id, req.user._id);
+
+    res.status(200).json({
+      success: true,
+      order,
+    });
+  } catch (error) {
+    switch (error.message) {
+      case "INVALID_ORDER_ID":
+        next(new ApiError(400, "Invalid order ID format"));
+        break;
+      case "ORDER_NOT_FOUND":
+        next(new ApiError(404, "Order not found or access denied"));
+        break;
+      default:
+        next(error);
+    }
+  }
 };
