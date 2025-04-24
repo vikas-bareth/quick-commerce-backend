@@ -91,3 +91,8 @@ exports.updateOrderStatus = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getOrderHistory = async (req, res) => {
+  const orders = await orderService.getOrderHistory(req.user._id);
+  res.status(200).json({ success: true, orders });
+};

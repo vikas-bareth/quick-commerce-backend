@@ -50,3 +50,9 @@ exports.updateOrderStatus = async (orderId, deliveryPartnerId, newStatus) => {
 
   return order;
 };
+
+exports.getOrderHistory = async (userId) => {
+  return await Order.find({
+    $or: [{ customer: userId }, { deliveryPartner: userId }],
+  }).sort({ createdAt: -1 });
+};
