@@ -25,10 +25,10 @@ const orderSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: {
-        values: ["Pending", "Accepted", "Out for Delivery", "Delivered"],
+        values: ["PENDING", "ACCEPTED", "OUT_FOR_DELIVERY", "DELIVERED"],
         message: "Invalid order status",
       },
-      default: "Pending",
+      default: "PENDING",
     },
     deliveryAddress: {
       type: String,
