@@ -14,6 +14,8 @@ router.post(
   orderController.createOrder
 );
 
+router.get("/history", userAuth, orderController.getOrderHistory);
+
 router.get(
   "/customer",
   userAuth,
@@ -21,7 +23,6 @@ router.get(
   orderController.getCustomerOrders
 );
 
-// Delivery Partner Routes
 router.get(
   "/pending",
   userAuth,
@@ -29,13 +30,22 @@ router.get(
   orderController.getPendingOrders
 );
 
+router.get(
+  "/in-progress",
+  userAuth,
+  roleCheck("DELIVERY"),
+  orderController.getProcessingOrders
+);
+
+router.get("/:id", userAuth, roleCheck("CUSTOMER"), orderController.getOrder);
+
+router.post("/cancel/:id", userAuth, orderController.cancelOrder);
+
 router.put(
   "/:id/status",
   userAuth,
   roleCheck("DELIVERY"),
   orderController.updateOrderStatus
 );
-
-router.get("/history", userAuth, orderController.getOrderHistory);
 
 module.exports = router;

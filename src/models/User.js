@@ -4,11 +4,17 @@ const bcrypt = require("bcrypt");
 
 const userSchema = new mongoose.Schema(
   {
-    name: {
+    firstName: {
       type: String,
-      required: [true, "Name is required"],
+      required: true,
       trim: true,
-      maxlength: [50, "Name cannot exceed 50 characters"],
+      minlength: [2, "First name must be at least 2 characters long"],
+      maxlength: [50, "First name must not exceed 50 characters"],
+    },
+    lastName: {
+      type: String,
+      trim: true,
+      maxlength: [50, "Last name must not exceed 50 characters"],
     },
     email: {
       type: String,
@@ -23,6 +29,17 @@ const userSchema = new mongoose.Schema(
       required: [true, "Password is required"],
       minlength: [6, "Password must be at least 6 characters"],
       select: false,
+    },
+    photoUrl: {
+      type: String,
+      default: "https://geographyandyou.com/images/user-profile.png",
+      validate: {
+        validator: function (v) {
+          // Simple URL validation
+          return /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif))$/i.test(v);
+        },
+        message: (props) => `${props.value} is not a valid image URL!`,
+      },
     },
     role: {
       type: String,
@@ -65,3 +82,4 @@ userSchema.pre("save", async function (next) {
 userSchema.index({ email: 1 }, { unique: true });
 
 module.exports = mongoose.model("User", userSchema);
+//checking git tracking

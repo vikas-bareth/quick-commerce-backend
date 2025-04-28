@@ -70,10 +70,68 @@ exports.getOrderById = async (orderId, userId) => {
   const order = await Order.findOne({
     _id: orderId,
     customer: userId,
-  });
+  })
+    .populate({
+      path: "customer",
+      select: "firstName lastName email phone photoUrl role",
+    })
+    .populate({
+      path: "deliveryPartner",
+      select: "firstName lastName email phone photoUrl role",
+      match: { _id: { $exists: true } },
+    })
+    .lean();
 
   if (!order) {
     throw new Error("ORDER_NOT_FOUND");
+  }
+
+  const formatName = (user) => {
+    if (!user) return null;
+    return `${user.firstName} ${user.lastName || ""}`.trim();
+  };
+
+  return {
+    success: true,
+    order: {
+      ...order,
+      customer: {
+        ...order.customer,
+        name: formatName(order.customer),
+        photoUrl: order.customer.photoUrl,
+      },
+      deliveryPartner: order.deliveryPartner
+        ? {
+            ...order.deliveryPartner,
+            name: formatName(order.deliveryPartner),
+            photoUrl: order.deliveryPartner.photoUrl,
+          }
+        : null,
+    },
+  };
+};
+
+exports.getProcessingOrders = async () => {
+  const orders = await Order.find({
+    status: { $in: ["ACCEPTED", "OUT_FOR_DELIVERY"] },
+  });
+  return orders;
+};
+
+exports.cancelOrder = async (orderId) => {
+  if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    throw new Error("INVALID_ORDER_ID");
+  }
+  const order = await Order.findByIdAndUpdate(
+    orderId,
+    {
+      status: "CANCELED",
+    },
+    { new: true, runValidators: true }
+  );
+
+  if (!order) {
+    throw new Error(ERRORS.ORDER_NOT_FOUND);
   }
 
   return order;

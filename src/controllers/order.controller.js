@@ -34,7 +34,6 @@ exports.getCustomerOrders = async (req, res, next) => {
     const orders = await orderService.getCustomerOrders(req.user._id);
 
     res.status(200).json({
-      success: true,
       count: orders.length,
       orders,
     });
@@ -106,12 +105,10 @@ exports.getOrderHistory = async (req, res) => {
 
 exports.getOrder = async (req, res, next) => {
   try {
+    console.log("GET ORDER BY ID IS CALLING");
     const order = await orderService.getOrderById(req.params.id, req.user._id);
 
-    res.status(200).json({
-      success: true,
-      order,
-    });
+    res.status(200).json(order);
   } catch (error) {
     switch (error.message) {
       case "INVALID_ORDER_ID":
@@ -123,5 +120,23 @@ exports.getOrder = async (req, res, next) => {
       default:
         next(error);
     }
+  }
+};
+
+exports.getProcessingOrders = async (req, res) => {
+  try {
+    const orders = await orderService.getProcessingOrders();
+    res.status(200).json(orders);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+exports.cancelOrder = async (req, res) => {
+  try {
+    const order = await orderService.cancelOrder(req.params.id);
+    res.status(200).json(order);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 };
