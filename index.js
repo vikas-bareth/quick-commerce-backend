@@ -14,6 +14,60 @@ const cors = require("cors");
 const logger = require("./src/utils/logger");
 const authRouter = require("./src/routes/auth.route");
 const orderRouter = require("./src/routes/order.route");
+const http = require("http");
+const socketIo = require("socket.io");
+const user = require("./src/models/user");
+
+const server = http.createServer(app);
+
+// Socket.IO setup
+const io = socketIo(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+  transports: ["websocket", "polling"],
+});
+
+io.use(async (socket, next) => {
+  try {
+    const token =
+      socket.handshake.auth.token ||
+      socket.handshake.headers.cookie
+        ?.split("; ")
+        .find((c) => c.startsWith("token="))
+        ?.split("=")[1];
+
+    if (!token) {
+      logger.error("Socket connection rejected: No token provided");
+      return next(new Error("Not authenticated - No token found"));
+    }
+
+    const decoded = JWT.verify(token, process.env.JWT_SECRET);
+
+    const user = await user.findById(decoded.id).select("-password");
+    if (!user) {
+      logger.error("Socket connection rejected: User not found");
+      return next(new Error("User not found"));
+    }
+
+    socket.user = user;
+    logger.info(`Socket authenticated for user: ${user._id}`);
+    next();
+  } catch (error) {
+    if (error.name === "JsonWebTokenError") {
+      logger.error("Socket connection rejected: Invalid token");
+      return next(new Error("Invalid token"));
+    }
+    if (error.name === "TokenExpiredError") {
+      logger.error("Socket connection rejected: Token expired");
+      return next(new Error("Token expired"));
+    }
+    logger.error(`Socket authentication error: ${error.message}`);
+    next(new Error("Authentication failed"));
+  }
+});
 
 //Middleware
 app.use(
@@ -54,5 +108,13 @@ connectDB().then(() => {
     });
     logger.info(`🚀 Server listening on port ${PORT}`);
     logger.info(`🌐 Visit:${APP_URL}`);
+  });
+});
+
+process.on("SIGTERM", () => {
+  logger.info("SIGTERM received. Shutting down gracefully...");
+  server.close(() => {
+    logger.info("Server closed");
+    process.exit(0);
   });
 });
