@@ -77,6 +77,15 @@ exports.updateOrderStatus = async (req, res, next) => {
       status
     );
 
+    const io = req.app.get("io");
+    io.to(order._id.toString()).emit("orderStatusUpdated", {
+      orderId: order._id,
+      newStatus: order.status,
+      updatedAt: order.updatedAt,
+      customer: order.customer,
+      deliveryPartner: order.deliveryPartner,
+    });
+
     res.status(200).json({
       success: true,
       order,

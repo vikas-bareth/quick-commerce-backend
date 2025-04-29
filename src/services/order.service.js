@@ -47,7 +47,7 @@ exports.updateOrderStatus = async (orderId, deliveryPartnerId, newStatus) => {
       deliveryPartner: deliveryPartnerId,
     },
     { new: true, runValidators: true }
-  );
+  ).populate("customer deliveryPartner");
 
   if (!order) {
     throw new Error(ERRORS.ORDER_NOT_FOUND);
