@@ -15,19 +15,17 @@ const logger = require("./src/utils/logger");
 const authRouter = require("./src/routes/auth.route");
 const orderRouter = require("./src/routes/order.route");
 const http = require("http");
-const socketIo = require("socket.io");
-const user = require("./src/models/user");
+const { Server } = require("socket.io");
+const User = require("./src/models/user");
+const JWT = require("jsonwebtoken");
 
-const server = http.createServer(app);
+const httpServer = http.createServer(app);
 
-// Socket.IO setup
-const io = socketIo(server, {
+const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
-    methods: ["GET", "POST"],
+    origin: process.env.FRONTEND_URL,
     credentials: true,
   },
-  transports: ["websocket", "polling"],
 });
 
 io.use(async (socket, next) => {
@@ -46,14 +44,14 @@ io.use(async (socket, next) => {
 
     const decoded = JWT.verify(token, process.env.JWT_SECRET);
 
-    const user = await user.findById(decoded.id).select("-password");
-    if (!user) {
+    const foundUser = await User.findById(decoded.id).select("-password");
+    if (!foundUser) {
       logger.error("Socket connection rejected: User not found");
       return next(new Error("User not found"));
     }
 
-    socket.user = user;
-    logger.info(`Socket authenticated for user: ${user._id}`);
+    socket.user = foundUser;
+    logger.info(`Socket authenticated for user: ${foundUser._id}`);
     next();
   } catch (error) {
     if (error.name === "JsonWebTokenError") {
@@ -69,13 +67,32 @@ io.use(async (socket, next) => {
   }
 });
 
+io.on("connection", (socket) => {
+  logger.info(`New Client connected: ${socket.id} | User: ${socket.user?._id}`);
+
+  socket.on("joinOrderRoom", (orderId) => {
+    socket.join(orderId);
+    logger.info(`Socket ${socket.id} joined room ${orderId}`);
+  });
+
+  socket.on("leaveOrderRoom", (orderId) => {
+    socket.leave(orderId);
+    logger.info(`Socket ${socket.id} left room ${orderId}`);
+  });
+
+  socket.on("disconnect", () => {
+    logger.info(`Client disconnected: ${socket.id}`);
+  });
+});
+
+app.set("io", io);
+
 //Middleware
-app.use(
-  cors({
-    origin: "*",
-    credentials: true,
-  })
-);
+const corsConfig = {
+  credentials: true,
+  origin: process.env.FRONTEND_URL,
+};
+app.use(cors(corsConfig));
 app.use(express.json());
 app.use(cookieParser());
 app.use(
@@ -98,7 +115,7 @@ app.use(errorHandler);
 
 connectDB().then(() => {
   console.log("Database connection successfully.....");
-  app.listen(PORT, () => {
+  httpServer.listen(PORT, () => {
     const endpoints = listEndpoints(app);
     logger.info("📚 Available API Routes:");
     endpoints.forEach((ep) => {
