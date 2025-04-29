@@ -18,6 +18,18 @@ exports.createOrder = async (req, res, next) => {
       deliveryAddress,
     });
 
+    req.app.get("io").emit("newOrderAvailable", {
+      orderId: order._id,
+      id: order._id,
+      product: order.product,
+      quantity: order.quantity,
+      status: order.status,
+      deliveryAddress: order.deliveryAddress,
+      customer: order.customer,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    });
+
     res.status(201).json(order);
   } catch (error) {
     if (error.message === "MISSING_REQUIRED_FIELDS") {
